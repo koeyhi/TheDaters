@@ -412,3 +412,310 @@ HAVING
     nunique_ticket = 1
 ORDER BY cabin
 LIMIT 0, 5;
+
+SHOW TABLES;
+
+/*
+부서 정보 테이블(dept)
+-- deptno: 부서번호
+-- dname: 부서이름
+-- loc: 지역
+*/
+SELECT * FROM dept;
+
+/*
+사원 정보 테이블(emp)
+empno: 사원번호
+ename: 사원이름
+job: 직무
+mgr: 상급자의 사원번호
+hiredate: 입사일
+sal: 급여
+comm: 커미션
+deptno: 부서번호
+*/
+SELECT * FROM emp;
+
+# join 이란?
+-- 다수의 테이블에 있는 데이터를 특정 조건에 따라 연결하여 하나의 결과로 만들어 조회할 수 있는 키워드
+-- 서로 다른 테이블에 분리되어 있는 관련된 데이터를 하나의 결과로 조회
+-- 다수의 테이블에서 공통된 데이터를 기준으로 조회하는 명령어
+-- 컬럼을 기준으로 데이터가 동일할 경우 매칭을 시켜 결합
+
+## INNER JOIN
+-- 테이블 사이에서 ON 조건에 맞는 데이터만 JOIN
+-- JOIN 하는 테이블의 행 개수가 JOIN 후에 조회 결과의 행 개수보다 많을 수도, 적을 수도 있다.
+SELECT ename, job, dname, loc
+FROM dept
+    INNER JOIN emp ON dept.deptno = emp.deptno;
+
+-- SELECT * FROM dept JOIN emp ON dept.deptno = emp.deptno;
+-- SELECT * FROM dept, emp WHERE dept.deptno = emp.deptno;
+
+-- table 에 별칭 줄 수 있다.
+SELECT ename, dname, mgr
+FROM emp e
+    INNER JOIN dept d ON e.deptno = d.deptno;
+
+-- SCOTT 사원의 이름과 부서이름, 지역 조회하기
+SELECT ename, dname, loc
+FROM emp
+    INNER JOIN dept ON emp.deptno = dept.deptno
+    AND ename = "SCOTT";
+
+-- 뉴욕에서 근무하는 사원이름과 급여, 지역 등을 조회하기
+SELECT ename, sal, loc
+FROM emp
+    INNER JOIN dept ON emp.deptno = dept.deptno
+    AND dept.loc = "NEW YORK";
+
+-- RESEARCH 부서에서 근무하는 사원의 이름과, 급여, 입사일 조회
+SELECT ename, sal, hiredate
+FROM emp
+    INNER JOIN dept ON dname = "RESEARCH"
+    AND emp.deptno = dept.deptno;
+
+-- 직무가 MANAGER 인 사원의 이름과 부서명, 급여, 커미션 조회
+SELECT ename, dname, sal, comm
+FROM emp
+    INNER JOIN dept ON job = "MANAGER"
+    AND emp.deptno = dept.deptno;
+-- 필터링 후 조인 > 더 빠름
+
+# SELF 조인
+-- 동일한 테이블끼리 조인
+
+-- 각 사원의 상사 이름 조회
+SELECT * FROM emp;
+
+SELECT e.ename "사원이름", m.ename "상사이름"
+FROM emp e
+    INNER JOIN emp m ON e.mgr = m.empno;
+
+-- 상사 이름이 KING 인 사원의 이름과 상사이름을 조회
+SELECT e.ename "사원이름", m.ename "상사이름"
+FROM emp e
+    INNER JOIN emp m ON m.ename = "KING"
+    AND e.mgr = m.empno;
+
+-- ALLEN 의 동료 이름(같은 부서에서 일하는 사람) 조회
+SELECT m.ename
+FROM emp e
+    INNER JOIN emp m ON e.ename = "ALLEN"
+    AND e.deptno = m.deptno
+    AND m.ename != "ALLEN";
+
+# LEFT JOIN
+-- 왼쪽 테이블을 기준으로 JOIN
+-- 왼쪽 테이블의 컬럼값과 ON 조건에 맞는 샘플이 없을 경우 NULL 값이 들어간다.
+-- JOIN 후 조회 결과의 행 개수가 늘어날 수는 있지만 줄어들지는 않는다.
+
+-- 상사이름을 조회할 때 KING 도 같이 조회하고 싶다면?
+SELECT e.ename "사원이름", m.ename "상사이름"
+FROM emp e
+    LEFT JOIN emp m ON e.mgr = m.empno;
+
+-- 모든 부서의 정보와 함께 부서에 속한 사원들의 정보 조회
+SELECT * FROM dept LEFT JOIN emp ON dept.deptno = emp.deptno;
+
+-- 모든 부서의 정보와 함께 급여가 3000 이상인 직원들의 연봉과 이름 조회
+SELECT d.*, e.ename, e.sal
+FROM dept d
+    LEFT JOIN emp e ON sal >= 3000
+    AND d.deptno = e.deptno;
+
+-- 모든 부서의 정보와 함께 커미션이 있는 직원들의 이름과 커미션 조회
+SELECT d.*, e.ename, e.comm
+FROM dept d
+    LEFT JOIN emp e ON e.comm > 0
+    AND d.deptno = e.deptno;
+
+-- 모든 부서의 부서별 연봉에 대한 총합과 평균, 표준편차, 사원수 조회
+SELECT
+    d.deptno,
+    SUM(e.sal) sum_sal,
+    AVG(e.sal) avg_sal,
+    STD(e.sal) std_sal,
+    COUNT(e.empno) total_emp
+FROM dept d
+    LEFT JOIN emp e ON d.deptno = e.deptno
+GROUP BY
+    d.deptno;
+
+-- 각 상사들의 부하직원수와 부하직원들의 평균급여 조회
+-- SELF 조인 후, 관리자의 사원번호를 기준으로 그룹화하고
+SELECT e.ename 상사이름, COUNT(m.empno) 부하직원수, AVG(m.sal) 부하직원평균급여
+FROM emp e
+    INNER JOIN emp m ON e.empno = m.mgr
+GROUP BY
+    e.empno;
+
+# SUB-QUERY
+-- 쿼리 안에 쿼리를 넣을 수 있음
+-- 일반적으로 WHERE, FROM, JOIN 절에 사용
+
+-- SELECT 절 사용 예시, 사용 x
+-- SELECT *, ( SELECT dname FROM dept WHERE deptno = e.deptno ) FROM emp e;
+
+-- WHERE 절
+-- SCOTT 사원과 같은 부서에 있는 직원 이름 검색
+SELECT ename
+FROM emp
+WHERE
+    deptno = (
+        SELECT deptno
+        FROM emp
+        WHERE
+            ename = "SCOTT"
+    )
+    AND ename != "SCOTT";
+
+-- SMITH 와 동일한 직무를 가진 직원들의 정보 검색
+SELECT *
+FROM emp
+WHERE
+    job = (
+        SELECT job
+        FROM emp
+        WHERE
+            ename = "SMITH"
+    )
+    AND ename != "SMITH";
+
+-- SMITH 의 급여 이상을 받는 직원들의 사원명과 급여 검색
+SELECT ename, sal
+FROM emp
+WHERE
+    sal >= (
+        SELECT sal
+        FROM emp
+        WHERE
+            ename = "SMITH"
+    )
+    AND ename != "SMITH";
+
+-- FROM 절에서 서브쿼리 작성
+-- 사원 테이블에서 급여가 2000 이 넘는 사람들의 이름과 부서번호, 부서이름, 지역 조회
+SELECT ename, d.deptno, d.dname, d.loc
+FROM (
+        SELECT *
+        FROM emp
+        WHERE
+            sal > 2000
+    ) e
+    INNER JOIN dept d ON d.deptno = e.deptno;
+
+-- JOIN 절에서 서브 쿼리 작성
+-- 모든 부서의 부서이름과 지역, 부서 내의 평균 급여 조회
+SELECT d.dname, d.loc, e.avg_sal
+FROM dept d
+    LEFT JOIN (
+        SELECT deptno, AVG(sal) avg_sal
+        FROM emp
+        GROUP BY
+            deptno
+    ) e ON d.deptno = e.deptno;
+
+-- 서브쿼리를 활용해서 테이블 복제하기
+CREATE TABLE emp01 AS SELECT * FROM emp;
+
+SELECT * FROM emp01;
+
+-- 데이터를 제외하고 테이블 복제하기
+CREATE TABLE emp02 AS SELECT * FROM emp WHERE 1 = 0;
+
+SELECT * FROM emp02;
+
+-- 서브쿼리를 활용해서 INSERT 해보기
+INSERT INTO emp02 SELECT * FROM emp;
+
+SELECT * FROM emp02;
+
+# DALLAS에 근무하는 사원들의 이름, 부서번호를 사원이름으로 오름차순 정렬해서 조회하시오.
+-- where 절에 서브쿼리를 사용할 것
+SELECT ename, deptno
+FROM emp
+WHERE
+    deptno = (
+        SELECT deptno
+        FROM dept
+        WHERE
+            loc = "DALLAS"
+    )
+ORDER BY ename;
+
+# 직무(job)가 Manager인 사람들이 속한 부서의 부서번호와 부서명 , 지역을 조회하시오.
+-- manager 사람들이 다수이기 때문에 where절에 in 을 활용!
+-- where 절에 서브쿼리를 사용할 것
+SELECT *
+FROM dept
+WHERE
+    deptno IN (
+        SELECT deptno
+        FROM emp
+        WHERE
+            job = "MANAGER"
+    );
+
+# emp 테이블에서 커미션이 있는 사람들의 이름과 부서번호, 부서이름, 지역 조회하시오.
+-- from 절에 서브쿼리 사용하고 , inner join 활용
+SELECT e.ename, e.deptno, d.dname, d.loc
+FROM (
+        SELECT ename, deptno
+        FROM emp
+        WHERE
+            comm > 0
+    ) e
+    INNER JOIN dept d ON e.deptno = d.deptno;
+
+# 항구별 평균 운임료를 구하여 항구에 매칭 시켜 조회해 주는 예시
+select a.*, avg_fare
+from tb_titanic a
+    left join (
+        select embarked, avg(fare) as avg_fare
+        from tb_titanic
+        group by
+            embarked
+    ) b on a.embarked = b.embarked;
+
+# 객실번호별 빈도수를 구하여 객실번호에 매칭 시켜 조회해 주세요.
+SELECT a.*, count_cabin
+FROM tb_titanic a
+    LEFT JOIN (
+        SELECT cabin, COUNT(passengerid) as count_cabin
+        FROM tb_titanic
+        GROUP BY
+            cabin
+    ) b ON a.cabin = b.cabin;
+
+# 각 항구에 대하여 객실등급별 빈도수를 구하여 각 항구의 객실등급에  매칭 시켜 조회해 주세요.
+SELECT a.*, embarked_pclass_count
+FROM tb_titanic a
+    LEFT JOIN (
+        SELECT
+            embarked, pclass, COUNT(passengerid) embarked_pclass_count
+        FROM tb_titanic
+        GROUP BY
+            embarked, pclass
+    ) b ON a.embarked = b.embarked
+    AND a.pclass = b.pclass;
+
+# 각 항구에 대하여 객실등급별 나이와 운임료의 평균과 표준편차, 그리고 여성의 비율을  각 항구의 객실등급에 매칭 시켜 조회해 주세요.
+SELECT
+    a.*,
+    avg_age,
+    std_age,
+    avg_fare,
+    std_fare,
+    rate_female
+FROM tb_titanic a
+    LEFT JOIN (
+        SELECT
+            embarked, pclass, AVG(age) avg_age, STD(age) std_age, AVG(fare) avg_fare, STD(fare) std_fare, AVG(gender = "female") rate_female
+        FROM tb_titanic
+        WHERE
+            embarked IS NOT NULL
+        GROUP BY
+            embarked, pclass
+    ) b ON a.embarked = b.embarked
+    AND a.pclass = b.pclass;
