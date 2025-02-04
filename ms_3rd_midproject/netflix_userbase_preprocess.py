@@ -4,8 +4,6 @@ DATA_PATH = "data/"
 
 userbase = pd.read_csv(f"{DATA_PATH}Netflix Userbase.csv")
 country_type_fee = pd.read_csv(f"{DATA_PATH}Netflix subscription fee Dec-2021.csv")
-revenue = pd.read_csv(f"{DATA_PATH}netflix_revenue_updated.csv")
-
 
 # 국가, 등급별 구독금액 컬럼 생성
 subscription_costs = []
